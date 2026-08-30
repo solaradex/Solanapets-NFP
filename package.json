@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.32.1",
+    "@types/bn.js": "^5.2.0",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "chai": "^6.2.2",
+    "mocha": "^11.8.0"
+  },
+  "devDependencies": {
+    "ts-mocha": "10.0.0",
+    "ts-node": "10.9.2",
+    "typescript": "5.3.3"
+  }
+}
