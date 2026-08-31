@@ -1,0 +1,129 @@
+{
+  "address": "5BQfuedprGSxUQcqiP1enfA8J721dF274dYTvt4qwwsQ",
+  "metadata": {
+    "name": "solana_pets_nfp",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "create_pet",
+      "discriminator": [
+        31,
+        116,
+        155,
+        96,
+        251,
+        101,
+        128,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "pet",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "species",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "feed_pet",
+      "discriminator": [
+        178,
+        186,
+        190,
+        67,
+        17,
+        33,
+        124,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "pet",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "pet"
+          ]
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Pet",
+      "discriminator": [
+        180,
+        195,
+        178,
+        241,
+        61,
+        123,
+        238,
+        32
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PetIsDead",
+      "msg": "This pet has passed away."
+    }
+  ],
+  "types": [
+    {
+      "name": "Pet",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "species",
+            "type": "string"
+          },
+          {
+            "name": "hunger",
+            "type": "u64"
+          },
+          {
+            "name": "is_alive",
+            "type": "bool"
+          }
+        ]
+      }
+    }
+  ]
+}
