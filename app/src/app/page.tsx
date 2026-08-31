@@ -20,6 +20,9 @@ export default function Home() {
   const [isMinting, setIsMinting] = useState(false);
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [petInfo, setPetInfo] = useState<{ name: string; species: string } | null>(null);
+    const [petAccountAddress, setPetAccountAddress] = useState<PublicKey | null>(
+    new PublicKey("6xV4EMms6GA2aef4Eq19RjagcaJFLpVkETJhxpFVBUrw")
+  );
 
   const mintLuna = async () => {
     if (!wallet.connected || !wallet.publicKey) {
@@ -61,6 +64,7 @@ export default function Home() {
       console.log("Step 6: Transaction sent:", tx);
       setTxSignature(tx);
       setPetInfo({ name: "Luna", species: "Otter" });
+      setPetAccountAddress(petAccount.publicKey);
     } catch (err: any) {
       console.error("FULL ERROR:", err);
       console.error("Error name:", err?.name);
@@ -68,6 +72,38 @@ export default function Home() {
       console.error("Error logs:", err?.logs);
       console.error("Error code:", err?.code);
       alert("Mint failed: " + (err?.message || err?.name || JSON.stringify(err)));
+    } finally {
+      setIsMinting(false);
+    }
+  };
+  const feedLuna = async () => {
+    if (!wallet.connected || !wallet.publicKey || !petAccountAddress) {
+      alert("Mint Luna first!");
+      return;
+    }
+
+    setIsMinting(true); // Reuse the loading state for simplicity
+    try {
+      const provider = new anchor.AnchorProvider(
+        connection,
+        wallet as unknown as anchor.Wallet,
+        { commitment: "confirmed" }
+      );
+      const program = new anchor.Program(idl as anchor.Idl, provider);
+
+      const tx = await program.methods
+        .feedPet()
+                .accounts({
+          pet: petAccountAddress,
+          owner: wallet.publicKey,
+        })
+        .rpc({ skipPreflight: true, commitment: "confirmed" });
+
+      console.log("Fed Luna! Tx:", tx);
+      alert("🦦 Luna has been fed! Hunger restored.");
+    } catch (err: any) {
+      console.error("Feed failed:", err);
+      alert("Feed failed: " + (err?.message || JSON.stringify(err)));
     } finally {
       setIsMinting(false);
     }
@@ -137,6 +173,15 @@ export default function Home() {
             </div>
           )}
         </div>
+          {petAccountAddress && (
+            <button
+              onClick={feedLuna}
+              disabled={isMinting}
+              className="w-full py-3 rounded-xl text-lg font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/25 transition-all disabled:opacity-50"
+            >
+              🐟 Feed Luna
+            </button>
+          )}
       </main>
 
       <footer className="px-8 py-4 border-t border-slate-800 text-center text-sm text-slate-500">
