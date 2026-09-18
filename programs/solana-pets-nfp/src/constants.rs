@@ -34,3 +34,5 @@ pub const EYE_GENE_HAZEL: u8 = 3;
 pub const EYE_GENE_BROWN: u8 = 4;
 pub const EYE_GENE_BLUE: u8 = 5;
 pub const EYE_GENE_GREEN: u8 = 6;
+
+pub const PLAYER_IDENTITY_SEED: &[u8] = b"player";
