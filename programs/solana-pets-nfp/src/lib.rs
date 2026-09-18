@@ -45,6 +45,32 @@ pub mod solana_pets_nfp {
         Ok(())
     }
 
+    pub fn initialize_player_identity_v2(ctx: Context<InitializePlayerIdentityV2>) -> Result<()> {
+        let identity = &mut ctx.accounts.identity;
+        identity.authority = ctx.accounts.authority.key();
+        identity.created_at = Clock::get()?.unix_timestamp;
+        identity.wallet_count = 0;
+        Ok(())
+    }
+
+    pub fn associate_wallet_v2(ctx: Context<AssociateWalletV2>) -> Result<()> {
+        let identity = &mut ctx.accounts.identity;
+        require!(
+            identity.wallet_count < MAX_ASSOCIATED_WALLETS,
+            PetError::WalletLimitReached
+        );
+        let association = &mut ctx.accounts.association;
+        association.identity = identity.key();
+        association.wallet = ctx.accounts.wallet.key();
+        association.associated_at = Clock::get()?.unix_timestamp;
+        association.active = true;
+        identity.wallet_count = identity
+            .wallet_count
+            .checked_add(1)
+            .ok_or(PetError::WalletLimitReached)?;
+        Ok(())
+    }
+
     pub fn initialize_genesis(ctx: Context<InitializeGenesis>) -> Result<()> {
         let genesis = &mut ctx.accounts.genesis;
         genesis.authority = ctx.accounts.authority.key();
@@ -134,6 +160,28 @@ pub struct DeactivateWallet<'info> {
     /// CHECK: wallet is the associated wallet.
     pub wallet: UncheckedAccount<'info>,
     pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct InitializePlayerIdentityV2<'info> {
+    #[account(init, payer = authority, space = 8 + PlayerIdentity::INIT_SPACE, seeds = [PLAYER_IDENTITY_V2_SEED, authority.key().as_ref()], bump)]
+    pub identity: Account<'info, PlayerIdentity>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AssociateWalletV2<'info> {
+    #[account(mut, seeds = [PLAYER_IDENTITY_V2_SEED, authority.key().as_ref()], bump, has_one = authority)]
+    pub identity: Account<'info, PlayerIdentity>,
+    #[account(init, payer = authority, space = 8 + WalletAssociation::INIT_SPACE, seeds = [WALLET_ASSOCIATION_V2_SEED, identity.key().as_ref(), wallet.key().as_ref()], bump)]
+    pub association: Account<'info, WalletAssociation>,
+    /// CHECK: wallet ownership is verified by the application before this instruction.
+    pub wallet: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
