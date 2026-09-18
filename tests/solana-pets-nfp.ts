@@ -89,4 +89,45 @@ describe("solana-pets-nfp", () => {
     if (identity.walletCount !== 1) throw new Error("V2 identity wallet count should be 1");
     if (!association.active || !association.wallet.equals(secondaryWallet)) throw new Error("V2 wallet association is incorrect");
   });
+  it("links an owned pet to the canonical Player Identity", async () => {
+    const [identityPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("player-v2"), provider.wallet.publicKey.toBuffer()],
+      program.programId,
+    );
+    const identity = await program.account.playerIdentity.fetch(identityPda);
+    if (!identity.authority.equals(provider.wallet.publicKey)) throw new Error("Unexpected V2 identity authority");
+
+    const petAccount = anchor.web3.Keypair.generate();
+    await program.methods.createPet("Identity Test", "Otter").accounts({
+      genesis: genesisPda,
+      pet: petAccount.publicKey,
+      payer: provider.wallet.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    }).signers([petAccount]).rpc();
+
+    const [associationPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("wallet-v2"), identityPda.toBuffer(), provider.wallet.publicKey.toBuffer()],
+      program.programId,
+    );
+    const [linkPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("pet-identity"), petAccount.publicKey.toBuffer()],
+      program.programId,
+    );
+
+    await program.methods.linkPetToIdentity().accounts({
+      identity: identityPda,
+      association: associationPda,
+      link: linkPda,
+      pet: petAccount.publicKey,
+      wallet: provider.wallet.publicKey,
+      authority: provider.wallet.publicKey,
+      systemProgram: anchor.web3.SystemProgram.programId,
+    }).rpc();
+
+    const link = await program.account.petIdentityLink.fetch(linkPda);
+    if (!link.pet.equals(petAccount.publicKey) || !link.identity.equals(identityPda)) {
+      throw new Error("Pet identity link is incorrect");
+    }
+  });
+
 });
