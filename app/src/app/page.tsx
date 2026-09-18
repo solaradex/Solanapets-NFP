@@ -43,6 +43,7 @@ export default function Home() {
   const [securityStatus, setSecurityStatus] = useState<string | null>(null);
   const [securityBusy, setSecurityBusy] = useState(false);
   const [pendingSecondaryWallet, setPendingSecondaryWallet] = useState<string | null>(null);
+  const [associatedWallets, setAssociatedWallets] = useState<string[]>([]);
 
   const registerPasskey = async () => {
     setSecurityBusy(true); setSecurityStatus(null);
@@ -70,10 +71,18 @@ export default function Home() {
     finally { setSecurityBusy(false); }
   };
 
+  const refreshWalletAssociations = async () => {
+    const response = await fetch("/api/player/wallets");
+    if (!response.ok) return;
+    const data = await response.json();
+    setAssociatedWallets((data.wallets ?? []).filter((x: { active?: boolean }) => x.active !== false).map((x: { wallet: string }) => x.wallet));
+  };
+
   const verifyWalletForAssociation = async () => {
     if (!wallet.publicKey) { setSecurityStatus("Connect a wallet."); return; }
     setSecurityBusy(true); setSecurityStatus(null);
     try {
+      await refreshWalletAssociations();
       const identityResponse = await fetch("/api/player/identity");
       if (!identityResponse.ok) throw new Error("Unable to load canonical Player Identity.");
       const identity = await identityResponse.json();
