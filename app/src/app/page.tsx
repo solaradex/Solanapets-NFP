@@ -42,6 +42,7 @@ export default function Home() {
   const [petAccountAddress, setPetAccountAddress] = useState<PublicKey | null>(new PublicKey("6xV4EMms6GA2aef4Eq19RjagcaJFLpVkETJhxpFVBUrw"));
   const [securityStatus, setSecurityStatus] = useState<string | null>(null);
   const [securityBusy, setSecurityBusy] = useState(false);
+  const [pendingSecondaryWallet, setPendingSecondaryWallet] = useState<string | null>(null);
 
   const registerPasskey = async () => {
     setSecurityBusy(true); setSecurityStatus(null);
@@ -70,35 +71,89 @@ export default function Home() {
   };
 
   const verifyWalletForAssociation = async () => {
-    if (!wallet.publicKey || !wallet.signMessage) { setSecurityStatus("Connect a wallet that supports message signing."); return; }
+    if (!wallet.publicKey) { setSecurityStatus("Connect a wallet."); return; }
     setSecurityBusy(true); setSecurityStatus(null);
     try {
-      const optionsResponse = await fetch("/api/wallet/associate/options", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ wallet: wallet.publicKey.toBase58() }) });
+      const identityResponse = await fetch("/api/player/identity");
+      if (!identityResponse.ok) throw new Error("Unable to load canonical Player Identity.");
+      const identity = await identityResponse.json();
+
+      if (pendingSecondaryWallet) {
+        if (wallet.publicKey.toBase58() !== identity.primaryWallet) {
+          setSecurityStatus("Secondary wallet verified. Switch to the primary wallet to complete the on-chain V2 association.");
+          return;
+        }
+        const provider = new anchor.AnchorProvider(connection, wallet as unknown as anchor.Wallet, { commitment: "confirmed" });
+        const program = new anchor.Program(idl as anchor.Idl, provider) as unknown as PetsProgram;
+        const primaryKey = wallet.publicKey;
+        const identityPda = identity.v2IdentityPda
+          ? new PublicKey(identity.v2IdentityPda)
+          : PublicKey.findProgramAddressSync([Buffer.from("player-v2"), primaryKey.toBuffer()], PROGRAM_ID)[0];
+        try { await program.account.playerIdentity.fetch(identityPda); }
+        catch {
+          await program.methods.initializePlayerIdentityV2().accounts({ identity: identityPda, authority: primaryKey, systemProgram: SystemProgram.programId }).rpc({ commitment: "confirmed", maxRetries: 5 });
+        }
+        const [associationPda] = PublicKey.findProgramAddressSync([Buffer.from("wallet-v2"), identityPda.toBuffer(), new PublicKey(pendingSecondaryWallet).toBuffer()], PROGRAM_ID);
+        const tx = await program.methods.associateWalletV2().accounts({
+          identity: identityPda,
+          association: associationPda,
+          wallet: new PublicKey(pendingSecondaryWallet),
+          authority: primaryKey,
+          systemProgram: SystemProgram.programId,
+        }).rpc({ commitment: "confirmed", maxRetries: 5 });
+        setPendingSecondaryWallet(null);
+        setSecurityStatus("Secondary wallet associated through Player Identity V2. Tx: " + tx);
+        return;
+      }
+
+      if (!wallet.signMessage) { setSecurityStatus("Connect a wallet that supports message signing."); return; }
+      const optionsResponse = await fetch("/api/wallet/associate/options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet: wallet.publicKey.toBase58() }),
+      });
       if (!optionsResponse.ok) throw new Error((await optionsResponse.json()).error || "Passkey authentication is required.");
       const { challengeId, message } = await optionsResponse.json();
       const signature = await wallet.signMessage(new TextEncoder().encode(message));
       const signatureBase58 = anchor.utils.bytes.bs58.encode(signature);
-      const verifyResponse = await fetch("/api/wallet/associate/verify", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ challengeId, signature: signatureBase58 }) });
+      const verifyResponse = await fetch("/api/wallet/associate/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeId, signature: signatureBase58 }),
+      });
       if (!verifyResponse.ok) throw new Error((await verifyResponse.json()).error || "Wallet verification failed.");
       const verified = await verifyResponse.json();
 
-      const identityResponse = await fetch("/api/player/identity");
-      if (!identityResponse.ok) throw new Error("Unable to load canonical Player Identity.");
-      const identity = await identityResponse.json();
-      if (!identity.primaryWallet || identity.primaryWallet !== wallet.publicKey.toBase58() || verified.primaryWallet !== wallet.publicKey.toBase58()) {
-        setSecurityStatus("Wallet verified off-chain. Connect the primary wallet to complete the on-chain V2 association.");
+      if (verified.role === "secondary") {
+        setPendingSecondaryWallet(verified.wallet);
+        setSecurityStatus("Wallet verified and linked to your Player Identity. Switch to the primary wallet and press this button again to complete the on-chain V2 association.");
         return;
+      }
+
+      const refreshedIdentityResponse = await fetch("/api/player/identity");
+      if (!refreshedIdentityResponse.ok) throw new Error("Unable to load canonical Player Identity.");
+      const refreshedIdentity = await refreshedIdentityResponse.json();
+      if (refreshedIdentity.primaryWallet !== wallet.publicKey.toBase58()) {
+        throw new Error("The connected wallet is not the canonical primary wallet.");
       }
 
       const provider = new anchor.AnchorProvider(connection, wallet as unknown as anchor.Wallet, { commitment: "confirmed" });
       const program = new anchor.Program(idl as anchor.Idl, provider) as unknown as PetsProgram;
-      const [identityPda] = PublicKey.findProgramAddressSync([Buffer.from("player-v2"), wallet.publicKey.toBuffer()], PROGRAM_ID);
+      const identityPda = refreshedIdentity.v2IdentityPda
+        ? new PublicKey(refreshedIdentity.v2IdentityPda)
+        : PublicKey.findProgramAddressSync([Buffer.from("player-v2"), wallet.publicKey.toBuffer()], PROGRAM_ID)[0];
       try { await program.account.playerIdentity.fetch(identityPda); }
       catch {
         await program.methods.initializePlayerIdentityV2().accounts({ identity: identityPda, authority: wallet.publicKey, systemProgram: SystemProgram.programId }).rpc({ commitment: "confirmed", maxRetries: 5 });
       }
       const [associationPda] = PublicKey.findProgramAddressSync([Buffer.from("wallet-v2"), identityPda.toBuffer(), wallet.publicKey.toBuffer()], PROGRAM_ID);
-      const tx = await program.methods.associateWalletV2().accounts({ identity: identityPda, association: associationPda, wallet: wallet.publicKey, authority: wallet.publicKey, systemProgram: SystemProgram.programId }).rpc({ commitment: "confirmed", maxRetries: 5 });
+      const tx = await program.methods.associateWalletV2().accounts({
+        identity: identityPda,
+        association: associationPda,
+        wallet: wallet.publicKey,
+        authority: wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      }).rpc({ commitment: "confirmed", maxRetries: 5 });
       setSecurityStatus("Primary wallet verified and associated through Player Identity V2. Tx: " + tx);
     } catch (err: unknown) { setSecurityStatus(errorMessage(err, "Wallet association cancelled or failed.")); }
     finally { setSecurityBusy(false); }
