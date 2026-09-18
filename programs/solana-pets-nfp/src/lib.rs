@@ -22,13 +22,19 @@ pub mod solana_pets_nfp {
 
     pub fn associate_wallet(ctx: Context<AssociateWallet>) -> Result<()> {
         let identity = &mut ctx.accounts.identity;
-        require!(identity.wallet_count < MAX_ASSOCIATED_WALLETS, PetError::WalletLimitReached);
+        require!(
+            identity.wallet_count < MAX_ASSOCIATED_WALLETS,
+            PetError::WalletLimitReached
+        );
         let association = &mut ctx.accounts.association;
         association.identity = identity.key();
         association.wallet = ctx.accounts.wallet.key();
         association.associated_at = Clock::get()?.unix_timestamp;
         association.active = true;
-        identity.wallet_count = identity.wallet_count.checked_add(1).ok_or(PetError::WalletLimitReached)?;
+        identity.wallet_count = identity
+            .wallet_count
+            .checked_add(1)
+            .ok_or(PetError::WalletLimitReached)?;
         Ok(())
     }
 
@@ -55,7 +61,10 @@ pub mod solana_pets_nfp {
 
     pub fn create_pet(ctx: Context<CreatePet>, name: String, species: String) -> Result<()> {
         require!(!ctx.accounts.genesis.paused, PetError::GenesisPaused);
-        require!(ctx.accounts.genesis.minted < ctx.accounts.genesis.max_supply, PetError::GenesisSoldOut);
+        require!(
+            ctx.accounts.genesis.minted < ctx.accounts.genesis.max_supply,
+            PetError::GenesisSoldOut
+        );
         require!(name.len() <= MAX_PET_NAME, PetError::NameTooLong);
         require!(species.len() <= MAX_SPECIES, PetError::SpeciesTooLong);
 
@@ -163,12 +172,20 @@ pub struct FeedPet<'info> {
 
 #[error_code]
 pub enum PetError {
-    #[msg("This pet has passed away.")] PetIsDead,
-    #[msg("Genesis minting is paused.")] GenesisPaused,
-    #[msg("The Genesis supply is sold out.")] GenesisSoldOut,
-    #[msg("Pet name is too long.")] NameTooLong,
-    #[msg("Species name is too long.")] SpeciesTooLong,
-    #[msg("Species is not enabled in the V1 Genesis collection.")] UnsupportedSpecies,
-    #[msg("The maximum number of wallets is already associated.")] WalletLimitReached,
-    #[msg("The wallet association is already inactive.")] WalletAlreadyInactive,
+    #[msg("This pet has passed away.")]
+    PetIsDead,
+    #[msg("Genesis minting is paused.")]
+    GenesisPaused,
+    #[msg("The Genesis supply is sold out.")]
+    GenesisSoldOut,
+    #[msg("Pet name is too long.")]
+    NameTooLong,
+    #[msg("Species name is too long.")]
+    SpeciesTooLong,
+    #[msg("Species is not enabled in the V1 Genesis collection.")]
+    UnsupportedSpecies,
+    #[msg("The maximum number of wallets is already associated.")]
+    WalletLimitReached,
+    #[msg("The wallet association is already inactive.")]
+    WalletAlreadyInactive,
 }
