@@ -43,6 +43,13 @@ pub mod solana_pets_nfp {
         pet.genesis_number = genesis_number;
         pet.hunger = 100;
         pet.is_alive = true;
+        pet.genetics_version = GENETICS_VERSION_V1;
+        pet.species_id = 0;
+        pet.sex = 0;
+        pet.coat_gene_a = 0;
+        pet.coat_gene_b = 0;
+        pet.eye_gene_a = 0;
+        pet.eye_gene_b = 0;
 
         ctx.accounts.genesis.minted = genesis_number;
 
