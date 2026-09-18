@@ -51,6 +51,9 @@ pub mod solana_pets_nfp {
             "Dog" => SPECIES_DOG,
             _ => return err!(PetError::UnsupportedSpecies),
         };
+
+        // Genesis genetics are assigned by the mint authority in the V1 schema.
+        // The full species-specific pairing tables remain an ecosystem data layer.
         pet.sex = 0;
         pet.coat_gene_a = 0;
         pet.coat_gene_b = 0;
