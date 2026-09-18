@@ -180,7 +180,7 @@ export default function Home() {
         wallet as unknown as anchor.Wallet,
         { commitment: "confirmed" }
       );
-      const program = new anchor.Program(idl as anchor.Idl, provider);
+      const program = new anchor.Program(idl as anchor.Idl, provider) as unknown as PetsProgram;
 
       const [genesisPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("genesis")],
