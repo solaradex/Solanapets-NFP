@@ -12,6 +12,13 @@ use state::*;
 pub mod solana_pets_nfp {
     use super::*;
 
+    pub fn initialize_player_identity(ctx: Context<InitializePlayerIdentity>) -> Result<()> {
+        let identity = &mut ctx.accounts.identity;
+        identity.authority = ctx.accounts.authority.key();
+        identity.created_at = Clock::get()?.unix_timestamp;
+        Ok(())
+    }
+
     pub fn initialize_genesis(ctx: Context<InitializeGenesis>) -> Result<()> {
         let genesis = &mut ctx.accounts.genesis;
         genesis.authority = ctx.accounts.authority.key();
@@ -73,6 +80,21 @@ pub mod solana_pets_nfp {
         msg!("Fed {}! Fullness is now {}.", pet.name, pet.hunger);
         Ok(())
     }
+}
+
+#[derive(Accounts)]
+pub struct InitializePlayerIdentity<'info> {
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + PlayerIdentity::INIT_SPACE,
+        seeds = [PLAYER_IDENTITY_SEED, authority.key().as_ref()],
+        bump
+    )]
+    pub identity: Account<'info, PlayerIdentity>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
