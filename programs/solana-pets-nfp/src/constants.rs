@@ -34,5 +34,3 @@ pub const PLAYER_IDENTITY_V2_SEED: &[u8] = b"player-v2";
 pub const WALLET_ASSOCIATION_SEED: &[u8] = b"wallet";
 pub const WALLET_ASSOCIATION_V2_SEED: &[u8] = b"wallet-v2";
 pub const MAX_ASSOCIATED_WALLETS: u8 = 8;
-
-pub const PET_IDENTITY_LINK_SEED: &[u8] = b"pet-identity";
