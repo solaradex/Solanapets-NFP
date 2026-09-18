@@ -39,12 +39,18 @@ pub mod solana_pets_nfp {
         let pet = &mut ctx.accounts.pet;
         pet.owner = ctx.accounts.payer.key();
         pet.name = name;
-        pet.species = species;
+        pet.species = species.clone();
         pet.genesis_number = genesis_number;
         pet.hunger = 100;
         pet.is_alive = true;
         pet.genetics_version = GENETICS_VERSION_V1;
-        pet.species_id = 0;
+        pet.species_id = match species.as_str() {
+            "Otter" => SPECIES_OTTER,
+            "Cat" => SPECIES_CAT,
+            "Monkey" => SPECIES_MONKEY,
+            "Dog" => SPECIES_DOG,
+            _ => return err!(PetError::UnsupportedSpecies),
+        };
         pet.sex = 0;
         pet.coat_gene_a = 0;
         pet.coat_gene_b = 0;
@@ -130,4 +136,6 @@ pub enum PetError {
     NameTooLong,
     #[msg("Species name is too long.")]
     SpeciesTooLong,
+    #[msg("Species is not enabled in the V1 Genesis collection.")]
+    UnsupportedSpecies,
 }
