@@ -28,3 +28,11 @@ pub struct Pet {
     pub eye_gene_a: u8,
     pub eye_gene_b: u8,
 }
+
+
+#[account]
+#[derive(InitSpace)]
+pub struct PlayerIdentity {
+    pub authority: Pubkey,
+    pub created_at: i64,
+}
