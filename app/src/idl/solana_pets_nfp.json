@@ -8,7 +8,52 @@
   },
   "instructions": [
     {
-      "name": "create_pet",
+      "id": "initialize_genesis",
+      "discriminator": [
+        17,
+        205,
+        102,
+        29,
+        35,
+        92,
+        43,
+        84
+      ],
+      "accounts": [
+        {
+          "name": "genesis",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  115,
+                  105,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "id": "create_pet",
       "discriminator": [
         31,
         116,
@@ -20,6 +65,26 @@
         164
       ],
       "accounts": [
+        {
+          "name": "genesis",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  101,
+                  110,
+                  101,
+                  115,
+                  105,
+                  115
+                ]
+              }
+            ]
+          }
+        },
         {
           "name": "pet",
           "writable": true,
@@ -47,7 +112,7 @@
       ]
     },
     {
-      "name": "feed_pet",
+      "id": "feed_pet",
       "discriminator": [
         178,
         186,
@@ -76,6 +141,19 @@
   ],
   "accounts": [
     {
+      "name": "GenesisConfig",
+      "discriminator": [
+        149,
+        111,
+        52,
+        240,
+        131,
+        142,
+        217,
+        103
+      ]
+    },
+    {
       "name": "Pet",
       "discriminator": [
         180,
@@ -91,12 +169,56 @@
   ],
   "errors": [
     {
-      "code": 6000,
       "name": "PetIsDead",
+      "code": 6000,
       "msg": "This pet has passed away."
+    },
+    {
+      "name": "GenesisPaused",
+      "code": 6001,
+      "msg": "Genesis minting is paused."
+    },
+    {
+      "name": "GenesisSoldOut",
+      "code": 6002,
+      "msg": "The Genesis supply is sold out."
+    },
+    {
+      "name": "NameTooLong",
+      "code": 6003,
+      "msg": "Pet name is too long."
+    },
+    {
+      "name": "SpeciesTooLong",
+      "code": 6004,
+      "msg": "Species name is too long."
     }
   ],
   "types": [
+    {
+      "name": "GenesisConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_supply",
+            "type": "u16"
+          },
+          {
+            "name": "minted",
+            "type": "u16"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
     {
       "name": "Pet",
       "type": {
@@ -113,6 +235,10 @@
           {
             "name": "species",
             "type": "string"
+          },
+          {
+            "name": "genesis_number",
+            "type": "u16"
           },
           {
             "name": "hunger",
