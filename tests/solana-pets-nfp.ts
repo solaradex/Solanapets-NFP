@@ -51,4 +51,42 @@ describe("solana-pets-nfp", () => {
       throw new Error("Luna pet data is incorrect");
     }
   });
+
+  it("supports one v2 identity with multiple wallet associations", async () => {
+    const [identityPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("player-v2"), provider.wallet.publicKey.toBuffer()],
+      program.programId,
+    );
+
+    await program.methods
+      .initializePlayerIdentityV2()
+      .accounts({
+        identity: identityPda,
+        authority: provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    const secondaryWallet = anchor.web3.Keypair.generate().publicKey;
+    const [associationPda] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from("wallet-v2"), identityPda.toBuffer(), secondaryWallet.toBuffer()],
+      program.programId,
+    );
+
+    await program.methods
+      .associateWalletV2()
+      .accounts({
+        identity: identityPda,
+        association: associationPda,
+        wallet: secondaryWallet,
+        authority: provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
+    const identity = await program.account.playerIdentity.fetch(identityPda);
+    const association = await program.account.walletAssociation.fetch(associationPda);
+    if (identity.walletCount !== 1) throw new Error("V2 identity wallet count should be 1");
+    if (!association.active || !association.wallet.equals(secondaryWallet)) throw new Error("V2 wallet association is incorrect");
+  });
 });
