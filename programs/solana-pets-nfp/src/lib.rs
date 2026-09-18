@@ -71,6 +71,15 @@ pub mod solana_pets_nfp {
         Ok(())
     }
 
+    pub fn link_pet_to_identity(ctx: Context<LinkPetToIdentity>) -> Result<()> {
+        require_keys_eq!(ctx.accounts.pet.owner, ctx.accounts.wallet.key(), PetError::PetOwnerMismatch);
+        let link = &mut ctx.accounts.link;
+        link.pet = ctx.accounts.pet.key();
+        link.identity = ctx.accounts.identity.key();
+        link.linked_at = Clock::get()?.unix_timestamp;
+        Ok(())
+    }
+
     pub fn initialize_genesis(ctx: Context<InitializeGenesis>) -> Result<()> {
         let genesis = &mut ctx.accounts.genesis;
         genesis.authority = ctx.accounts.authority.key();
@@ -185,6 +194,21 @@ pub struct AssociateWalletV2<'info> {
 }
 
 #[derive(Accounts)]
+pub struct LinkPetToIdentity<'info> {
+    #[account(seeds = [PLAYER_IDENTITY_V2_SEED, authority.key().as_ref()], bump, has_one = authority)]
+    pub identity: Account<'info, PlayerIdentity>,
+    #[account(seeds = [WALLET_ASSOCIATION_V2_SEED, identity.key().as_ref(), wallet.key().as_ref()], bump, has_one = identity, constraint = association.active @ PetError::WalletAssociationInactive)]
+    pub association: Account<'info, WalletAssociation>,
+    #[account(seeds = [PET_IDENTITY_LINK_SEED, pet.key().as_ref()], bump)]
+    pub link: Account<'info, PetIdentityLink>,
+    pub pet: Account<'info, Pet>,
+    /// CHECK: The wallet is constrained by the V2 wallet association and must own the pet.
+    pub wallet: UncheckedAccount<'info>,
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct InitializeGenesis<'info> {
     #[account(init, payer = authority, space = 8 + GenesisConfig::INIT_SPACE, seeds = [GENESIS_SEED], bump)]
     pub genesis: Account<'info, GenesisConfig>,
@@ -236,4 +260,8 @@ pub enum PetError {
     WalletLimitReached,
     #[msg("The wallet association is already inactive.")]
     WalletAlreadyInactive,
+    #[msg("The connected wallet does not own this pet.")]
+    PetOwnerMismatch,
+    #[msg("The wallet association is inactive.")]
+    WalletAssociationInactive,
 }
