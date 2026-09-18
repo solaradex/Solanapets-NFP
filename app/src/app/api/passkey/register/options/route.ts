@@ -10,7 +10,7 @@ export async function POST() {
   const options=await generateRegistrationOptions({
     rpName:PASSKEY_RP_NAME,rpID:PASSKEY_RP_ID,userName:userId,userDisplayName:"SolanaPets Player",
     attestationType:"none",
-    excludeCredentials:(await getPasskeys(userId)).map(p=>({id:p.credentialId,transports:p.transports as any})),
+    excludeCredentials:(await getPasskeys(userId)).map(p=>({id:p.credentialId,transports:p.transports as unknown as never})),
     authenticatorSelection:{residentKey:"required",userVerification:"required"}
   });
   await setPendingRegistration(userId,options.challenge);
