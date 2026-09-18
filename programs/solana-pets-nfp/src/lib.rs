@@ -16,6 +16,26 @@ pub mod solana_pets_nfp {
         let identity = &mut ctx.accounts.identity;
         identity.authority = ctx.accounts.authority.key();
         identity.created_at = Clock::get()?.unix_timestamp;
+        identity.wallet_count = 0;
+        Ok(())
+    }
+
+    pub fn associate_wallet(ctx: Context<AssociateWallet>) -> Result<()> {
+        let identity = &mut ctx.accounts.identity;
+        require!(identity.wallet_count < MAX_ASSOCIATED_WALLETS, PetError::WalletLimitReached);
+        let association = &mut ctx.accounts.association;
+        association.identity = identity.key();
+        association.wallet = ctx.accounts.wallet.key();
+        association.associated_at = Clock::get()?.unix_timestamp;
+        association.active = true;
+        identity.wallet_count = identity.wallet_count.checked_add(1).ok_or(PetError::WalletLimitReached)?;
+        Ok(())
+    }
+
+    pub fn deactivate_wallet(ctx: Context<DeactivateWallet>) -> Result<()> {
+        let association = &mut ctx.accounts.association;
+        require!(association.active, PetError::WalletAlreadyInactive);
+        association.active = false;
         Ok(())
     }
 
@@ -28,10 +48,7 @@ pub mod solana_pets_nfp {
         Ok(())
     }
 
-    pub fn set_genesis_paused(
-        ctx: Context<SetGenesisPaused>,
-        paused: bool,
-    ) -> Result<()> {
+    pub fn set_genesis_paused(ctx: Context<SetGenesisPaused>, paused: bool) -> Result<()> {
         ctx.accounts.genesis.paused = paused;
         Ok(())
     }
@@ -58,17 +75,12 @@ pub mod solana_pets_nfp {
             "Dog" => SPECIES_DOG,
             _ => return err!(PetError::UnsupportedSpecies),
         };
-
-        // Genetics are intentionally stored as explicit on-chain fields.
-        // Approved species pairing tables will populate these values when locked.
         pet.sex = 0;
         pet.coat_gene_a = 0;
         pet.coat_gene_b = 0;
         pet.eye_gene_a = 0;
         pet.eye_gene_b = 0;
-
         ctx.accounts.genesis.minted = genesis_number;
-
         msg!("Successfully minted Genesis SolanaPet #{}!", genesis_number);
         Ok(())
     }
@@ -84,17 +96,35 @@ pub mod solana_pets_nfp {
 
 #[derive(Accounts)]
 pub struct InitializePlayerIdentity<'info> {
-    #[account(
-        init,
-        payer = authority,
-        space = 8 + PlayerIdentity::INIT_SPACE,
-        seeds = [PLAYER_IDENTITY_SEED, authority.key().as_ref()],
-        bump
-    )]
+    #[account(init, payer = authority, space = 8 + PlayerIdentity::INIT_SPACE, seeds = [PLAYER_IDENTITY_SEED, authority.key().as_ref()], bump)]
     pub identity: Account<'info, PlayerIdentity>,
     #[account(mut)]
     pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct AssociateWallet<'info> {
+    #[account(mut, seeds = [PLAYER_IDENTITY_SEED, authority.key().as_ref()], bump, has_one = authority)]
+    pub identity: Account<'info, PlayerIdentity>,
+    #[account(init, payer = authority, space = 8 + WalletAssociation::INIT_SPACE, seeds = [WALLET_ASSOCIATION_SEED, identity.key().as_ref(), wallet.key().as_ref()], bump)]
+    pub association: Account<'info, WalletAssociation>,
+    /// CHECK: wallet is the explicitly verified wallet being associated.
+    pub wallet: UncheckedAccount<'info>,
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct DeactivateWallet<'info> {
+    #[account(mut, seeds = [PLAYER_IDENTITY_SEED, authority.key().as_ref()], bump, has_one = authority)]
+    pub identity: Account<'info, PlayerIdentity>,
+    #[account(mut, seeds = [WALLET_ASSOCIATION_SEED, identity.key().as_ref(), wallet.key().as_ref()], bump, has_one = identity)]
+    pub association: Account<'info, WalletAssociation>,
+    /// CHECK: wallet is the associated wallet.
+    pub wallet: UncheckedAccount<'info>,
+    pub authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -108,12 +138,7 @@ pub struct InitializeGenesis<'info> {
 
 #[derive(Accounts)]
 pub struct SetGenesisPaused<'info> {
-    #[account(
-        mut,
-        seeds = [GENESIS_SEED],
-        bump,
-        has_one = authority
-    )]
+    #[account(mut, seeds = [GENESIS_SEED], bump, has_one = authority)]
     pub genesis: Account<'info, GenesisConfig>,
     pub authority: Signer<'info>,
 }
@@ -138,16 +163,12 @@ pub struct FeedPet<'info> {
 
 #[error_code]
 pub enum PetError {
-    #[msg("This pet has passed away.")]
-    PetIsDead,
-    #[msg("Genesis minting is paused.")]
-    GenesisPaused,
-    #[msg("The Genesis supply is sold out.")]
-    GenesisSoldOut,
-    #[msg("Pet name is too long.")]
-    NameTooLong,
-    #[msg("Species name is too long.")]
-    SpeciesTooLong,
-    #[msg("Species is not enabled in the V1 Genesis collection.")]
-    UnsupportedSpecies,
+    #[msg("This pet has passed away.")] PetIsDead,
+    #[msg("Genesis minting is paused.")] GenesisPaused,
+    #[msg("The Genesis supply is sold out.")] GenesisSoldOut,
+    #[msg("Pet name is too long.")] NameTooLong,
+    #[msg("Species name is too long.")] SpeciesTooLong,
+    #[msg("Species is not enabled in the V1 Genesis collection.")] UnsupportedSpecies,
+    #[msg("The maximum number of wallets is already associated.")] WalletLimitReached,
+    #[msg("The wallet association is already inactive.")] WalletAlreadyInactive,
 }
