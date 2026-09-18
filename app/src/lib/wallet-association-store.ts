@@ -8,6 +8,14 @@ export async function setWalletChallenge(id:string,v:Omit<Pending,"expiresAt">){
   await ensureIdentitySchema();
   await pool.query("INSERT INTO auth_challenge(challenge_id,user_id,kind,challenge,expires_at) VALUES($1,$2,'wallet',$3,NOW()+INTERVAL '5 minutes')",[id,v.userId,JSON.stringify({wallet:v.wallet,nonce:v.nonce})]);
 }
+export async function recordWalletAssociation(userId:string,wallet:string){
+  if(!process.env.DATABASE_URL){return}
+  await ensureIdentitySchema();
+  await pool.query(
+    "INSERT INTO wallet_association(user_id,wallet) VALUES($1,$2) ON CONFLICT(wallet) DO UPDATE SET user_id=EXCLUDED.user_id,active=TRUE",
+    [userId,wallet]
+  );
+}
 export async function consumeWalletChallenge(id:string){
   if(!process.env.DATABASE_URL){const v=memory.get(id);memory.delete(id);return v&&v.expiresAt>=Date.now()?v:null}
   await ensureIdentitySchema();
