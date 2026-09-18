@@ -1,4 +1,4 @@
-import { ensureIdentitySchema,pool } from "./db";
+import { ensureIdentitySchema, pool } from "./db";
 
 type Pending={userId:string;wallet:string;nonce:string;expiresAt:number};
 const memory=new Map<string,Pending>();
@@ -22,6 +22,14 @@ export async function recordWalletAssociation(userId:string,wallet:string){
     [userId,wallet]
   );
   return r.rowCount===1;
+}
+export async function listWalletAssociations(userId:string){
+  if(!process.env.DATABASE_URL){
+    return [...memoryAssociations.entries()].filter(([,owner])=>owner===userId).map(([wallet])=>({wallet,active:true}));
+  }
+  await ensureIdentitySchema();
+  const r=await pool.query("SELECT wallet,active,associated_at FROM wallet_association WHERE user_id=$1 ORDER BY associated_at ASC",[userId]);
+  return r.rows.map(x=>({wallet:x.wallet,active:x.active,associatedAt:x.associated_at}));
 }
 export async function consumeWalletChallenge(id:string){
   if(!process.env.DATABASE_URL){const v=memory.get(id);memory.delete(id);return v&&v.expiresAt>=Date.now()?v:null}
