@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "db:init": "node scripts/init-db.mjs"
+    "lint": "eslint"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.32.1",
@@ -20,8 +19,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "@simplewebauthn/browser": "^14.0.1",
-    "@simplewebauthn/server": "^14.0.1",
-    "pg": "^8.16.3"
+    "@simplewebauthn/server": "^14.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -31,7 +29,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "@types/pg": "^8.15.5"
+    "typescript": "^5"
   }
 }
