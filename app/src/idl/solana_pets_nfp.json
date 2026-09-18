@@ -137,6 +137,220 @@
       ],
       "args": [],
       "name": "feed_pet"
+    },
+    {
+      "name": "initialize_player_identity",
+      "discriminator": [
+        76,
+        200,
+        37,
+        9,
+        239,
+        95,
+        149,
+        248
+      ],
+      "accounts": [
+        {
+          "name": "identity",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "associate_wallet",
+      "discriminator": [
+        156,
+        218,
+        20,
+        93,
+        160,
+        42,
+        217,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "identity",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "association",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "identity"
+              },
+              {
+                "kind": "account",
+                "path": "wallet"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wallet"
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "deactivate_wallet",
+      "discriminator": [
+        32,
+        67,
+        58,
+        106,
+        174,
+        138,
+        49,
+        224
+      ],
+      "accounts": [
+        {
+          "name": "identity",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  121,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "authority"
+              }
+            ]
+          }
+        },
+        {
+          "name": "association",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  119,
+                  97,
+                  108,
+                  108,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "identity"
+              },
+              {
+                "kind": "account",
+                "path": "wallet"
+              }
+            ]
+          }
+        },
+        {
+          "name": "wallet"
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_genesis_paused",
+      "discriminator": [
+        115,
+        183,
+        178,
+        111,
+        83,
+        14,
+        94,
+        118
+      ],
+      "accounts": [],
+      "args": []
     }
   ],
   "accounts": [
@@ -165,6 +379,32 @@
         238,
         32
       ]
+    },
+    {
+      "name": "PlayerIdentity",
+      "discriminator": [
+        85,
+        172,
+        40,
+        166,
+        220,
+        193,
+        194,
+        235
+      ]
+    },
+    {
+      "name": "WalletAssociation",
+      "discriminator": [
+        107,
+        169,
+        189,
+        12,
+        90,
+        93,
+        84,
+        241
+      ]
     }
   ],
   "errors": [
@@ -192,6 +432,21 @@
       "name": "SpeciesTooLong",
       "code": 6004,
       "msg": "Species name is too long."
+    },
+    {
+      "name": "UnsupportedSpecies",
+      "code": 6005,
+      "msg": "Species is not enabled in the V1 Genesis collection."
+    },
+    {
+      "name": "WalletLimitReached",
+      "code": 6006,
+      "msg": "The maximum number of wallets is already associated."
+    },
+    {
+      "name": "WalletAlreadyInactive",
+      "code": 6007,
+      "msg": "The wallet association is already inactive."
     }
   ],
   "types": [
@@ -246,6 +501,78 @@
           },
           {
             "name": "is_alive",
+            "type": "bool"
+          },
+          {
+            "name": "genetics_version",
+            "type": "u8"
+          },
+          {
+            "name": "species_id",
+            "type": "u8"
+          },
+          {
+            "name": "sex",
+            "type": "u8"
+          },
+          {
+            "name": "coat_gene_a",
+            "type": "u8"
+          },
+          {
+            "name": "coat_gene_b",
+            "type": "u8"
+          },
+          {
+            "name": "eye_gene_a",
+            "type": "u8"
+          },
+          {
+            "name": "eye_gene_b",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlayerIdentity",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "wallet_count",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WalletAssociation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "identity",
+            "type": "pubkey"
+          },
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "associated_at",
+            "type": "i64"
+          },
+          {
+            "name": "active",
             "type": "bool"
           }
         ]
