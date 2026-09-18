@@ -114,19 +114,6 @@ pub struct FeedPet<'info> {
     pub owner: Signer<'info>,
 }
 
-#[account]
-#[derive(InitSpace)]
-pub struct Pet {
-    pub owner: Pubkey,
-    #[max_len(32)]
-    pub name: String,
-    #[max_len(16)]
-    pub species: String,
-    pub genesis_number: u16,
-    pub hunger: u64,
-    pub is_alive: bool,
-}
-
 #[error_code]
 pub enum PetError {
     #[msg("This pet has passed away.")]
