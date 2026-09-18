@@ -9,6 +9,7 @@ pub const GENETICS_VERSION_V1: u8 = 1;
 pub const SPECIES_OTTER: u8 = 1;
 pub const SPECIES_CAT: u8 = 2;
 pub const SPECIES_MONKEY: u8 = 3;
+pub const SPECIES_DOG: u8 = 4;
 
 // Sex identifiers are intentionally numeric so the schema can remain compact.
 pub const SEX_FEMALE: u8 = 1;
