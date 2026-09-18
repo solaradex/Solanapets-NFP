@@ -29,11 +29,19 @@ pub struct Pet {
     pub eye_gene_b: u8,
 }
 
-
 #[account]
 #[derive(InitSpace)]
 pub struct PlayerIdentity {
     pub authority: Pubkey,
     pub created_at: i64,
     pub wallet_count: u8,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct WalletAssociation {
+    pub identity: Pubkey,
+    pub wallet: Pubkey,
+    pub associated_at: i64,
+    pub active: bool,
 }
