@@ -19,8 +19,10 @@ export function ensureIdentitySchema() {
   schemaPromise ??= pool.query(`
     CREATE TABLE IF NOT EXISTS player_identity (
       user_id TEXT PRIMARY KEY,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      primary_wallet TEXT
     );
+    ALTER TABLE player_identity ADD COLUMN IF NOT EXISTS primary_wallet TEXT;
     CREATE TABLE IF NOT EXISTS passkey_credential (
       credential_id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES player_identity(user_id) ON DELETE CASCADE,
