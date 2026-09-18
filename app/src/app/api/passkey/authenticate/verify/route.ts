@@ -12,7 +12,7 @@ export async function POST(request:Request){
   if(!id||typeof id!=="string")return Response.json({error:"Credential id is required"},{status:400});
   const stored=await getPasskeyByCredentialId(id);if(!stored)return Response.json({error:"Passkey not recognized"},{status:401});
   try{
-    const verification=await verifyAuthenticationResponse({response,expectedChallenge,expectedOrigin:PASSKEY_ORIGIN,expectedRPID:PASSKEY_RP_ID,requireUserVerification:true,credential:{id:stored.credential.credentialId,publicKey:stored.credential.publicKey,counter:stored.credential.counter,transports:stored.credential.transports as any}});
+    const verification=await verifyAuthenticationResponse({response,expectedChallenge,expectedOrigin:PASSKEY_ORIGIN,expectedRPID:PASSKEY_RP_ID,requireUserVerification:true,credential:{id:stored.credential.credentialId,publicKey:stored.credential.publicKey,counter:stored.credential.counter,transports:stored.credential.transports as unknown as never}});
     if(!verification.verified)return Response.json({error:"Passkey authentication failed"},{status:401});
     await updatePasskeyCounter(stored.userId,stored.credential.credentialId,verification.authenticationInfo.newCounter);
     c.set("solanapets_session",await createSession(stored.userId),{httpOnly:true,sameSite:"lax",secure:process.env.NODE_ENV==="production",path:"/",maxAge:604800});
