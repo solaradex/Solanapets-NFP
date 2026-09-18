@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { startAuthentication, startRegistration } from "@simplewebauthn/browser";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { Keypair, PublicKey, SystemProgram } from "@solana/web3.js";
 import * as anchor from "@coral-xyz/anchor";
@@ -23,6 +24,84 @@ export default function Home() {
     const [petAccountAddress, setPetAccountAddress] = useState<PublicKey | null>(
     new PublicKey("6xV4EMms6GA2aef4Eq19RjagcaJFLpVkETJhxpFVBUrw")
   );
+
+  const [securityStatus, setSecurityStatus] = useState<string | null>(null);
+  const [securityBusy, setSecurityBusy] = useState(false);
+
+  const registerPasskey = async () => {
+    setSecurityBusy(true);
+    setSecurityStatus(null);
+    try {
+      const optionsResponse = await fetch("/api/passkey/register/options", { method: "POST" });
+      if (!optionsResponse.ok) throw new Error((await optionsResponse.json()).error || "Unable to start passkey registration.");
+      const options = await optionsResponse.json();
+      const credential = await startRegistration({ optionsJSON: options });
+      const verifyResponse = await fetch("/api/passkey/register/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credential),
+      });
+      if (!verifyResponse.ok) throw new Error((await verifyResponse.json()).error || "Passkey registration failed.");
+      setSecurityStatus("Passkey secured this Player Identity.");
+    } catch (err: any) {
+      setSecurityStatus(err?.message || "Passkey registration cancelled or failed.");
+    } finally {
+      setSecurityBusy(false);
+    }
+  };
+
+  const authenticatePasskey = async () => {
+    setSecurityBusy(true);
+    setSecurityStatus(null);
+    try {
+      const optionsResponse = await fetch("/api/passkey/authenticate/options", { method: "POST" });
+      if (!optionsResponse.ok) throw new Error((await optionsResponse.json()).error || "Unable to start passkey authentication.");
+      const options = await optionsResponse.json();
+      const credential = await startAuthentication({ optionsJSON: options });
+      const verifyResponse = await fetch("/api/passkey/authenticate/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credential),
+      });
+      if (!verifyResponse.ok) throw new Error((await verifyResponse.json()).error || "Passkey authentication failed.");
+      setSecurityStatus("Player Identity authenticated.");
+    } catch (err: any) {
+      setSecurityStatus(err?.message || "Passkey authentication cancelled or failed.");
+    } finally {
+      setSecurityBusy(false);
+    }
+  };
+
+  const verifyWalletForAssociation = async () => {
+    if (!wallet.publicKey || !wallet.signMessage) {
+      setSecurityStatus("Connect a wallet that supports message signing.");
+      return;
+    }
+    setSecurityBusy(true);
+    setSecurityStatus(null);
+    try {
+      const optionsResponse = await fetch("/api/wallet/associate/options", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wallet: wallet.publicKey.toBase58() }),
+      });
+      if (!optionsResponse.ok) throw new Error((await optionsResponse.json()).error || "Passkey authentication is required.");
+      const { challengeId, message } = await optionsResponse.json();
+      const signature = await wallet.signMessage(new TextEncoder().encode(message));
+      const signatureBase58 = anchor.utils.bytes.bs58.encode(signature);
+      const verifyResponse = await fetch("/api/wallet/associate/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ challengeId, signature: signatureBase58 }),
+      });
+      if (!verifyResponse.ok) throw new Error((await verifyResponse.json()).error || "Wallet verification failed.");
+      setSecurityStatus("Wallet cryptographically verified. On-chain association is ready.");
+    } catch (err: any) {
+      setSecurityStatus(err?.message || "Wallet verification cancelled or failed.");
+    } finally {
+      setSecurityBusy(false);
+    }
+  };
 
   const mintLuna = async () => {
     if (!wallet.connected || !wallet.publicKey) {
