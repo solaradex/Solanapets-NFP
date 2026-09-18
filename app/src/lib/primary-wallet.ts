@@ -1,16 +1,13 @@
 import { ensureIdentitySchema, pool } from "./db";
-
-const memoryPrimary = new Map<string, string>();
-const memoryOwners = new Map<string, string>();
+import { getPrimaryWallet, setPrimaryWallet } from "./passkey-store";
+import { recordWalletAssociation } from "./wallet-association-store";
 
 export async function bindPrimaryWallet(userId: string, wallet: string): Promise<boolean> {
   if (!process.env.DATABASE_URL) {
-    const owner = memoryOwners.get(wallet);
-    const current = memoryPrimary.get(userId);
-    if ((owner && owner !== userId) || (current && current !== wallet)) return false;
-    memoryOwners.set(wallet, userId);
-    memoryPrimary.set(userId, wallet);
-    return true;
+    const current = await getPrimaryWallet(userId);
+    if (current && current !== wallet) return false;
+    if (!(await recordWalletAssociation(userId, wallet))) return false;
+    return setPrimaryWallet(userId, wallet);
   }
   await ensureIdentitySchema();
   const client = await pool.connect();
@@ -23,7 +20,7 @@ export async function bindPrimaryWallet(userId: string, wallet: string): Promise
       return false;
     }
     await client.query("UPDATE player_identity SET primary_wallet=$2 WHERE user_id=$1", [userId, wallet]);
-    await client.query("INSERT INTO wallet_association(user_id,wallet) VALUES($1,$2) ON CONFLICT(wallet) DO UPDATE SET active=TRUE WHERE wallet_association.user_id=EXCLUDED.user_id", [userId, wallet]);
+    await client.query("INSERT INTO wallet_association(user_id,wallet) VALUES($1,$2) ON CONFLICT(wallet) DO UPDATE SET active=TRUE WHERE wallet_association.user_id=EXCLUDED.user_id");
     await client.query("COMMIT");
     return true;
   } catch (error) {
@@ -32,4 +29,13 @@ export async function bindPrimaryWallet(userId: string, wallet: string): Promise
   } finally {
     client.release();
   }
+}
+
+export async function associateVerifiedWallet(userId: string, wallet: string): Promise<boolean> {
+  if (process.env.DATABASE_URL) {
+    await ensureIdentitySchema();
+    const identity = await pool.query("SELECT primary_wallet FROM player_identity WHERE user_id=$1", [userId]);
+    if (!identity.rows[0]) return false;
+  }
+  return recordWalletAssociation(userId, wallet);
 }
