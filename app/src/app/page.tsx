@@ -230,6 +230,16 @@ export default function Home() {
             </p>
           </div>
 
+          <div className="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 text-left space-y-4">
+            <div><h3 className="font-semibold text-lg">🔐 Player Identity Security</h3><p className="text-sm text-slate-400 mt-1">Protect your SolanaPets Identity with a device passkey and verify wallet ownership before association.</p></div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button onClick={registerPasskey} disabled={securityBusy} className="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-semibold disabled:opacity-50">Create Passkey</button>
+              <button onClick={authenticatePasskey} disabled={securityBusy} className="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-semibold disabled:opacity-50">Sign In with Passkey</button>
+            </div>
+            <button onClick={verifyWalletForAssociation} disabled={securityBusy || !wallet.connected} className="w-full py-3 rounded-xl bg-cyan-900/60 hover:bg-cyan-800/70 font-semibold disabled:opacity-50">Verify Connected Wallet</button>
+            {securityStatus && <p className="text-sm text-cyan-300 break-words">{securityStatus}</p>}
+          </div>
+
           <button
             onClick={mintLuna}
             disabled={!wallet.connected || isMinting}
