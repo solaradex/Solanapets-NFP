@@ -30,5 +30,7 @@ pub const EYE_GENE_BLUE: u8 = 5;
 pub const EYE_GENE_GREEN: u8 = 6;
 
 pub const PLAYER_IDENTITY_SEED: &[u8] = b"player";
+pub const PLAYER_IDENTITY_V2_SEED: &[u8] = b"player-v2";
 pub const WALLET_ASSOCIATION_SEED: &[u8] = b"wallet";
+pub const WALLET_ASSOCIATION_V2_SEED: &[u8] = b"wallet-v2";
 pub const MAX_ASSOCIATED_WALLETS: u8 = 8;
