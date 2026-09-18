@@ -35,4 +35,5 @@ pub struct Pet {
 pub struct PlayerIdentity {
     pub authority: Pubkey,
     pub created_at: i64,
+    pub wallet_count: u8,
 }
