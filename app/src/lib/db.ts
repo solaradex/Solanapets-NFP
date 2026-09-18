@@ -41,6 +41,13 @@ export function ensureIdentitySchema() {
       user_id TEXT NOT NULL REFERENCES player_identity(user_id) ON DELETE CASCADE,
       expires_at TIMESTAMPTZ NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS wallet_association (
+      user_id TEXT NOT NULL REFERENCES player_identity(user_id) ON DELETE CASCADE,
+      wallet TEXT PRIMARY KEY,
+      associated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      active BOOLEAN NOT NULL DEFAULT TRUE
+    );
+    CREATE INDEX IF NOT EXISTS wallet_association_user_idx ON wallet_association(user_id);
     CREATE INDEX IF NOT EXISTS passkey_user_idx ON passkey_credential(user_id);
     CREATE INDEX IF NOT EXISTS challenge_expiry_idx ON auth_challenge(expires_at);
     CREATE INDEX IF NOT EXISTS session_expiry_idx ON auth_session(expires_at);
