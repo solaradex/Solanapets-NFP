@@ -15,6 +15,29 @@ const WalletMultiButton = dynamic(
 
 const PROGRAM_ID = new PublicKey("5BQfuedprGSxUQcqiP1enfA8J721dF274dYTvt4qwwsQ");
 
+type PetAccount = { name: string; species: string };
+type GenesisAccount = { paused: boolean; minted: number; maxSupply: number };
+type MethodBuilder = { accounts(accounts: Record<string, PublicKey>): MethodBuilder; signers(signers: Keypair[]): MethodBuilder; rpc(options?: Record<string, unknown>): Promise<string> };
+type PetsProgram = {
+  account: {
+    playerIdentity: { fetch(address: PublicKey): Promise<unknown> };
+    genesisConfig: { fetch(address: PublicKey): Promise<GenesisAccount> };
+    pet: { fetch(address: PublicKey): Promise<PetAccount> };
+  };
+  methods: {
+    initializePlayerIdentity(): MethodBuilder;
+    associateWallet(): MethodBuilder;
+    initializeGenesis(): MethodBuilder;
+    createPet(name: string, species: string): MethodBuilder;
+    feedPet(): MethodBuilder;
+  };
+};
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
+
 export default function Home() {
   const { connection } = useConnection();
   const wallet = useWallet();
@@ -44,7 +67,7 @@ export default function Home() {
       if (!verifyResponse.ok) throw new Error((await verifyResponse.json()).error || "Passkey registration failed.");
       setSecurityStatus("Passkey secured this Player Identity.");
     } catch (err: unknown) {
-      setSecurityStatus(err instanceof Error ? err.message : undefined || "Passkey registration cancelled or failed.");
+      setSecurityStatus(errorMessage(err, "Passkey registration cancelled or failed."));
     } finally {
       setSecurityBusy(false);
     }
@@ -66,7 +89,7 @@ export default function Home() {
       if (!verifyResponse.ok) throw new Error((await verifyResponse.json()).error || "Passkey authentication failed.");
       setSecurityStatus("Player Identity authenticated.");
     } catch (err: unknown) {
-      setSecurityStatus(err instanceof Error ? err.message : undefined || "Passkey authentication cancelled or failed.");
+      setSecurityStatus(errorMessage(err, "Passkey authentication cancelled or failed."));
     } finally {
       setSecurityBusy(false);
     }
@@ -101,7 +124,7 @@ export default function Home() {
         wallet as unknown as anchor.Wallet,
         { commitment: "confirmed" }
       );
-      const program = new anchor.Program(idl as anchor.Idl, provider);
+      const program = new anchor.Program(idl as anchor.Idl, provider) as unknown as PetsProgram;
       const [identityPda] = PublicKey.findProgramAddressSync(
         [Buffer.from("player"), wallet.publicKey.toBuffer()],
         PROGRAM_ID
@@ -135,7 +158,7 @@ export default function Home() {
 
       setSecurityStatus("Wallet verified and associated on-chain. Tx: " + tx);
     } catch (err: unknown) {
-      setSecurityStatus(err instanceof Error ? err.message : undefined || "Wallet association cancelled or failed.");
+      setSecurityStatus(errorMessage(err, "Wallet association cancelled or failed."));
     } finally {
       setSecurityBusy(false);
     }
@@ -202,7 +225,7 @@ export default function Home() {
       setPetAccountAddress(petAccount.publicKey);
     } catch (err: unknown) {
       console.error("Genesis mint failed:", err);
-      alert("Mint failed: " + (err instanceof Error ? err.message : undefined || err?.name || JSON.stringify(err)));
+      alert("Mint failed: " + (errorMessage(err, "Unknown mint error.")));
     } finally {
       setIsMinting(false);
     }
@@ -235,7 +258,7 @@ export default function Home() {
       alert("🦦 Luna has been fed! Hunger restored.");
     } catch (err: unknown) {
       console.error("Feed failed:", err);
-      alert("Feed failed: " + (err instanceof Error ? err.message : undefined || JSON.stringify(err)));
+      alert("Feed failed: " + (errorMessage(err, "Unknown feed error.")));
     } finally {
       setIsMinting(false);
     }
