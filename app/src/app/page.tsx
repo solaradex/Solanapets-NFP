@@ -35,47 +35,62 @@ export default function Home() {
     setPetInfo(null);
 
     try {
-      console.log("Step 1: Wallet connected:", wallet.publicKey.toBase58());
-
       const provider = new anchor.AnchorProvider(
         connection,
         wallet as unknown as anchor.Wallet,
         { commitment: "confirmed" }
       );
-      console.log("Step 2: Provider created");
-
       const program = new anchor.Program(idl as anchor.Idl, provider);
-      console.log("Step 3: Program created");
-      console.log("Step 4: Available methods:", Object.keys(program.methods));
+
+      const [genesisPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("genesis")],
+        PROGRAM_ID
+      );
+
+      let genesis;
+      try {
+        genesis = await program.account.genesisConfig.fetch(genesisPda);
+      } catch {
+        await program.methods
+          .initializeGenesis()
+          .accounts({
+            genesis: genesisPda,
+            authority: wallet.publicKey,
+            systemProgram: SystemProgram.programId,
+          })
+          .rpc({ commitment: "confirmed" });
+
+        genesis = await program.account.genesisConfig.fetch(genesisPda);
+      }
+
+      if (genesis.paused) throw new Error("Genesis minting is currently paused.");
+      if (genesis.minted >= genesis.maxSupply) throw new Error("Genesis supply is sold out.");
 
       const petAccount = Keypair.generate();
-      console.log("Step 5: Pet account generated:", petAccount.publicKey.toBase58());
 
       const tx = await program.methods
         .createPet("Luna", "Otter")
         .accounts({
+          genesis: genesisPda,
           pet: petAccount.publicKey,
           payer: wallet.publicKey,
           systemProgram: SystemProgram.programId,
         })
         .signers([petAccount])
-        .rpc({ skipPreflight: true, commitment: "confirmed", maxRetries: 5 });
+        .rpc({ commitment: "confirmed", maxRetries: 5 });
 
-      console.log("Step 6: Transaction sent:", tx);
+      const pet = await program.account.pet.fetch(petAccount.publicKey);
       setTxSignature(tx);
-      setPetInfo({ name: "Luna", species: "Otter" });
+      setPetInfo({ name: pet.name, species: pet.species });
       setPetAccountAddress(petAccount.publicKey);
     } catch (err: any) {
-      console.error("FULL ERROR:", err);
-      console.error("Error name:", err?.name);
-      console.error("Error message:", err?.message);
-      console.error("Error logs:", err?.logs);
-      console.error("Error code:", err?.code);
+      console.error("Genesis mint failed:", err);
       alert("Mint failed: " + (err?.message || err?.name || JSON.stringify(err)));
     } finally {
       setIsMinting(false);
     }
   };
+
   const feedLuna = async () => {
     if (!wallet.connected || !wallet.publicKey || !petAccountAddress) {
       alert("Mint Luna first!");
