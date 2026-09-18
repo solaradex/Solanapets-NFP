@@ -21,6 +21,14 @@ pub mod solana_pets_nfp {
         Ok(())
     }
 
+    pub fn set_genesis_paused(
+        ctx: Context<SetGenesisPaused>,
+        paused: bool,
+    ) -> Result<()> {
+        ctx.accounts.genesis.paused = paused;
+        Ok(())
+    }
+
     pub fn create_pet(ctx: Context<CreatePet>, name: String, species: String) -> Result<()> {
         require!(!ctx.accounts.genesis.paused, PetError::GenesisPaused);
         require!(ctx.accounts.genesis.minted < ctx.accounts.genesis.max_supply, PetError::GenesisSoldOut);
@@ -58,6 +66,18 @@ pub struct InitializeGenesis<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SetGenesisPaused<'info> {
+    #[account(
+        mut,
+        seeds = [GENESIS_SEED],
+        bump,
+        has_one = authority
+    )]
+    pub genesis: Account<'info, GenesisConfig>,
+    pub authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
