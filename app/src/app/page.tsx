@@ -95,9 +95,47 @@ export default function Home() {
         body: JSON.stringify({ challengeId, signature: signatureBase58 }),
       });
       if (!verifyResponse.ok) throw new Error((await verifyResponse.json()).error || "Wallet verification failed.");
-      setSecurityStatus("Wallet cryptographically verified. On-chain association is ready.");
+
+      const provider = new anchor.AnchorProvider(
+        connection,
+        wallet as unknown as anchor.Wallet,
+        { commitment: "confirmed" }
+      );
+      const program = new anchor.Program(idl as anchor.Idl, provider);
+      const [identityPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("player"), wallet.publicKey.toBuffer()],
+        PROGRAM_ID
+      );
+      const [associationPda] = PublicKey.findProgramAddressSync(
+        [Buffer.from("wallet"), identityPda.toBuffer(), wallet.publicKey.toBuffer()],
+        PROGRAM_ID
+      );
+
+      let identityExists = true;
+      try {
+        await program.account.playerIdentity.fetch(identityPda);
+      } catch {
+        identityExists = false;
+      }
+      if (!identityExists) {
+        await program.methods.initializePlayerIdentity().accounts({
+          identity: identityPda,
+          authority: wallet.publicKey,
+          systemProgram: SystemProgram.programId,
+        }).rpc({ commitment: "confirmed", maxRetries: 5 });
+      }
+
+      const tx = await program.methods.associateWallet().accounts({
+        identity: identityPda,
+        association: associationPda,
+        wallet: wallet.publicKey,
+        authority: wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      }).rpc({ commitment: "confirmed", maxRetries: 5 });
+
+      setSecurityStatus("Wallet verified and associated on-chain. Tx: " + tx);
     } catch (err: any) {
-      setSecurityStatus(err?.message || "Wallet verification cancelled or failed.");
+      setSecurityStatus(err?.message || "Wallet association cancelled or failed.");
     } finally {
       setSecurityBusy(false);
     }
