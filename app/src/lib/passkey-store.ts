@@ -14,6 +14,7 @@ type AuthSession = { userId: string; expiresAt: number };
 const memoryPasskeys = new Map<string, StoredPasskey[]>();
 const memoryPending = new Map<string, Pending>();
 const memorySessions = new Map<string, AuthSession>();
+const memoryPrimaryWallets = new Map<string, string>();
 
 function durable() { return Boolean(process.env.DATABASE_URL); }
 
@@ -23,6 +24,28 @@ export async function ensurePlayerIdentity(userId?: string) {
   await ensureIdentitySchema();
   await pool.query("INSERT INTO player_identity(user_id) VALUES($1) ON CONFLICT DO NOTHING", [id]);
   return id;
+}
+
+export async function getPrimaryWallet(userId: string): Promise<string | null> {
+  if (!durable()) return memoryPrimaryWallets.get(userId) ?? null;
+  await ensureIdentitySchema();
+  const r = await pool.query("SELECT primary_wallet FROM player_identity WHERE user_id=$1", [userId]);
+  return r.rows[0]?.primary_wallet ?? null;
+}
+
+export async function setPrimaryWallet(userId: string, wallet: string): Promise<boolean> {
+  if (!durable()) {
+    const existing = memoryPrimaryWallets.get(userId);
+    if (existing && existing !== wallet) return false;
+    memoryPrimaryWallets.set(userId, wallet);
+    return true;
+  }
+  await ensureIdentitySchema();
+  const r = await pool.query(
+    "UPDATE player_identity SET primary_wallet=COALESCE(primary_wallet,$2) WHERE user_id=$1 AND (primary_wallet IS NULL OR primary_wallet=$2) RETURNING primary_wallet",
+    [userId, wallet],
+  );
+  return r.rowCount === 1;
 }
 
 export async function setPendingRegistration(userId: string, challenge: string) {
