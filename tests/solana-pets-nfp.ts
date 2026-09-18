@@ -7,12 +7,27 @@ describe("solana-pets-nfp", () => {
   anchor.setProvider(provider);
   const program = anchor.workspace.SolanaPetsNfp as Program<SolanaPetsNfp>;
 
-  it("Mints Luna the Otter!", async () => {
+  const [genesisPda] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("genesis")],
+    program.programId,
+  );
+
+  it("initializes Genesis and mints Luna #1", async () => {
+    await program.methods
+      .initializeGenesis()
+      .accounts({
+        genesis: genesisPda,
+        authority: provider.wallet.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .rpc();
+
     const petAccount = anchor.web3.Keypair.generate();
 
-    const tx = await program.methods
+    await program.methods
       .createPet("Luna", "Otter")
       .accounts({
+        genesis: genesisPda,
         pet: petAccount.publicKey,
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -20,11 +35,20 @@ describe("solana-pets-nfp", () => {
       .signers([petAccount])
       .rpc();
 
-    console.log("Transaction signature:", tx);
-    
-    const petData = await program.account.pet.fetch(petAccount.publicKey);
-    console.log("Pet Name:", petData.name);
-    console.log("Pet Species:", petData.species);
-    console.log("✅ Successfully verified Luna the Otter on-chain!");
+    const genesis = await program.account.genesisConfig.fetch(genesisPda);
+    const pet = await program.account.pet.fetch(petAccount.publicKey);
+
+    if (genesis.maxSupply !== 15000) {
+      throw new Error("Genesis max supply must be 15000");
+    }
+    if (genesis.minted !== 1) {
+      throw new Error("Genesis minted counter must be 1 after the first mint");
+    }
+    if (pet.genesisNumber !== 1) {
+      throw new Error("First Genesis pet must be numbered #1");
+    }
+    if (pet.name !== "Luna" || pet.species !== "Otter") {
+      throw new Error("Luna pet data is incorrect");
+    }
   });
 });
