@@ -1,0 +1,6 @@
+import crypto from "node:crypto";
+const ALPHABET="123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+export function decodeBase58(value:string):Uint8Array{let n=0n;for(const c of value){const i=ALPHABET.indexOf(c);if(i<0)throw new Error("Invalid base58");n=n*58n+BigInt(i)}const out:number[]=[];while(n){out.push(Number(n&255n));n>>=8n}out.reverse();let z=0;for(const c of value){if(c!=="1")break;z++}return new Uint8Array([...new Array(z).fill(0),...out])}
+export function randomNonce(){return crypto.randomBytes(32).toString("hex")}
+export function walletChallengeMessage(origin:string,wallet:string,nonce:string,expiresAt:number){return ["SolanaPets Wallet Association","",`Origin: ${origin}`,`Wallet: ${wallet}`,`Nonce: ${nonce}`,`Expires: ${new Date(expiresAt).toISOString()}`,"","Approve this wallet association only if you initiated it."].join("\n")}
+export function verifyEd25519(publicKeyBase58:string,signatureBase58:string,message:string){const pk=decodeBase58(publicKeyBase58),sig=decodeBase58(signatureBase58);if(pk.length!==32||sig.length!==64)return false;const prefix=Buffer.from("302a300506032b6570032100","hex");const key=crypto.createPublicKey({key:Buffer.concat([prefix,Buffer.from(pk)]),format:"der",type:"spki"});return crypto.verify(null,Buffer.from(message),key,Buffer.from(sig))}
