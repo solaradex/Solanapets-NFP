@@ -2,6 +2,7 @@ import { ensureIdentitySchema,pool } from "./db";
 
 type Pending={userId:string;wallet:string;nonce:string;expiresAt:number};
 const memory=new Map<string,Pending>();
+const memoryAssociations=new Map<string,string>();
 
 export async function setWalletChallenge(id:string,v:Omit<Pending,"expiresAt">){
   if(!process.env.DATABASE_URL){memory.set(id,{...v,expiresAt:Date.now()+300000});return}
@@ -9,12 +10,18 @@ export async function setWalletChallenge(id:string,v:Omit<Pending,"expiresAt">){
   await pool.query("INSERT INTO auth_challenge(challenge_id,user_id,kind,challenge,expires_at) VALUES($1,$2,'wallet',$3,NOW()+INTERVAL '5 minutes')",[id,v.userId,JSON.stringify({wallet:v.wallet,nonce:v.nonce})]);
 }
 export async function recordWalletAssociation(userId:string,wallet:string){
-  if(!process.env.DATABASE_URL){return}
+  if(!process.env.DATABASE_URL){
+    const existing=memoryAssociations.get(wallet);
+    if(existing&&existing!==userId)return false;
+    memoryAssociations.set(wallet,userId);
+    return true;
+  }
   await ensureIdentitySchema();
-  await pool.query(
-    "INSERT INTO wallet_association(user_id,wallet) VALUES($1,$2) ON CONFLICT(wallet) DO UPDATE SET user_id=EXCLUDED.user_id,active=TRUE",
+  const r=await pool.query(
+    "INSERT INTO wallet_association(user_id,wallet) VALUES($1,$2) ON CONFLICT(wallet) DO UPDATE SET active=TRUE WHERE wallet_association.user_id=EXCLUDED.user_id RETURNING wallet",
     [userId,wallet]
   );
+  return r.rowCount===1;
 }
 export async function consumeWalletChallenge(id:string){
   if(!process.env.DATABASE_URL){const v=memory.get(id);memory.delete(id);return v&&v.expiresAt>=Date.now()?v:null}
