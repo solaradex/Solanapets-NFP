@@ -45,3 +45,11 @@ pub struct WalletAssociation {
     pub associated_at: i64,
     pub active: bool,
 }
+
+#[account]
+#[derive(InitSpace)]
+pub struct PetIdentityLink {
+    pub pet: Pubkey,
+    pub identity: Pubkey,
+    pub linked_at: i64,
+}
