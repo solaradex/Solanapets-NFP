@@ -43,8 +43,8 @@ export default function Home() {
       });
       if (!verifyResponse.ok) throw new Error((await verifyResponse.json()).error || "Passkey registration failed.");
       setSecurityStatus("Passkey secured this Player Identity.");
-    } catch (err: any) {
-      setSecurityStatus(err?.message || "Passkey registration cancelled or failed.");
+    } catch (err: unknown) {
+      setSecurityStatus(err instanceof Error ? err.message : undefined || "Passkey registration cancelled or failed.");
     } finally {
       setSecurityBusy(false);
     }
@@ -65,8 +65,8 @@ export default function Home() {
       });
       if (!verifyResponse.ok) throw new Error((await verifyResponse.json()).error || "Passkey authentication failed.");
       setSecurityStatus("Player Identity authenticated.");
-    } catch (err: any) {
-      setSecurityStatus(err?.message || "Passkey authentication cancelled or failed.");
+    } catch (err: unknown) {
+      setSecurityStatus(err instanceof Error ? err.message : undefined || "Passkey authentication cancelled or failed.");
     } finally {
       setSecurityBusy(false);
     }
@@ -134,8 +134,8 @@ export default function Home() {
       }).rpc({ commitment: "confirmed", maxRetries: 5 });
 
       setSecurityStatus("Wallet verified and associated on-chain. Tx: " + tx);
-    } catch (err: any) {
-      setSecurityStatus(err?.message || "Wallet association cancelled or failed.");
+    } catch (err: unknown) {
+      setSecurityStatus(err instanceof Error ? err.message : undefined || "Wallet association cancelled or failed.");
     } finally {
       setSecurityBusy(false);
     }
@@ -200,9 +200,9 @@ export default function Home() {
       setTxSignature(tx);
       setPetInfo({ name: pet.name, species: pet.species });
       setPetAccountAddress(petAccount.publicKey);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Genesis mint failed:", err);
-      alert("Mint failed: " + (err?.message || err?.name || JSON.stringify(err)));
+      alert("Mint failed: " + (err instanceof Error ? err.message : undefined || err?.name || JSON.stringify(err)));
     } finally {
       setIsMinting(false);
     }
@@ -233,9 +233,9 @@ export default function Home() {
 
       console.log("Fed Luna! Tx:", tx);
       alert("🦦 Luna has been fed! Hunger restored.");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Feed failed:", err);
-      alert("Feed failed: " + (err?.message || JSON.stringify(err)));
+      alert("Feed failed: " + (err instanceof Error ? err.message : undefined || JSON.stringify(err)));
     } finally {
       setIsMinting(false);
     }
