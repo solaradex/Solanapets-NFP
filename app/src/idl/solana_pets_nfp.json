@@ -8,7 +8,6 @@
   },
   "instructions": [
     {
-      "id": "initialize_genesis",
       "discriminator": [
         17,
         205,
@@ -50,10 +49,10 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [],
+      "name": "initialize_genesis"
     },
     {
-      "id": "create_pet",
       "discriminator": [
         31,
         116,
@@ -109,10 +108,10 @@
           "name": "species",
           "type": "string"
         }
-      ]
+      ],
+      "name": "create_pet"
     },
     {
-      "id": "feed_pet",
       "discriminator": [
         178,
         186,
@@ -136,7 +135,8 @@
           ]
         }
       ],
-      "args": []
+      "args": [],
+      "name": "feed_pet"
     }
   ],
   "accounts": [
