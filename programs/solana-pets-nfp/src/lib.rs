@@ -199,7 +199,7 @@ pub struct LinkPetToIdentity<'info> {
     pub identity: Account<'info, PlayerIdentity>,
     #[account(seeds = [WALLET_ASSOCIATION_V2_SEED, identity.key().as_ref(), wallet.key().as_ref()], bump, has_one = identity, constraint = association.active @ PetError::WalletAssociationInactive)]
     pub association: Account<'info, WalletAssociation>,
-    #[account(seeds = [PET_IDENTITY_LINK_SEED, pet.key().as_ref()], bump)]
+    #[account(init, payer = authority, space = 8 + PetIdentityLink::INIT_SPACE, seeds = [PET_IDENTITY_LINK_SEED, pet.key().as_ref()], bump)]
     pub link: Account<'info, PetIdentityLink>,
     pub pet: Account<'info, Pet>,
     /// CHECK: The wallet is constrained by the V2 wallet association and must own the pet.
